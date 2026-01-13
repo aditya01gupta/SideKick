@@ -19,12 +19,261 @@ class SideKickApp extends StatelessWidget {
           secondary: Colors.amber,
         ),
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        useMaterial3: true,
       ),
-      home: const MainScreen(),
+      home: const WelcomeScreen(),
     );
   }
 }
 
+// ================== WELCOME SCREEN ==================
+class WelcomeScreen extends StatelessWidget {
+  const WelcomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.rocket_launch,
+                    size: 80,
+                    color: Colors.amber,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                const Text(
+                  'Welcome to SideKick',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Connect students with opportunities\nEarn while you learn',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const Spacer(),
+                const Text(
+                  'I am a...',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildRoleButton(
+                  context,
+                  'Student',
+                  'Find gigs and earn money',
+                  Icons.school,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const LoginScreen(userType: 'student'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildRoleButton(
+                  context,
+                  'Employer',
+                  'Post gigs and hire talent',
+                  Icons.business,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const LoginScreen(userType: 'employer'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleButton(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: Colors.indigo, size: 32),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.indigo),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================== LOGIN SCREEN ==================
+class LoginScreen extends StatelessWidget {
+  final String userType;
+  const LoginScreen({super.key, required this.userType});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.indigo),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Login as $userType',
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text('Enter your credentials to continue'),
+            const SizedBox(height: 40),
+            TextField(
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.email),
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.lock),
+              ),
+            ),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: () {
+                  // If student, go to MainScreen. If employer, placeholder.
+                  if (userType == 'student') {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const MainScreen()),
+                      (route) => false,
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Employer Dashboard coming soon!')),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text(
+                  'Login',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================== STUDENT MAIN SCREEN ==================
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -107,7 +356,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// HUSTLE SCREEN
+// ================== HUSTLE SCREEN (GIGS) ==================
 class HustleScreen extends StatefulWidget {
   const HustleScreen({super.key});
 
@@ -473,7 +722,7 @@ class _HustleScreenState extends State<HustleScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: const Text('Apply',
@@ -510,6 +759,7 @@ class _HustleScreenState extends State<HustleScreen> {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
+              borderRadius: BorderRadius.circular(16),
               onTap: () {
                 showModalBottomSheet(
                   context: context,
@@ -591,7 +841,6 @@ class _HustleScreenState extends State<HustleScreen> {
                   ),
                 );
               },
-              borderRadius: BorderRadius.circular(16),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -663,155 +912,86 @@ class _HustleScreenState extends State<HustleScreen> {
   }
 }
 
-// EARNINGS SCREEN
+// ================== EARNINGS SCREEN ==================
 class EarningsScreen extends StatelessWidget {
   const EarningsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.indigo,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Text(
+                'Earnings Dashboard',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              child: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)],
-                  ),
+                  color: Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
                 ),
-                child: Column(
+                child: ListView(
+                  padding: const EdgeInsets.only(top: 20),
                   children: [
-                    const Text(
-                      'Your Earnings',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Column(
-                        children: [
-                          Text('Total Earned',
-                              style: TextStyle(color: Colors.white70)),
-                          SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.currency_rupee,
-                                  color: Colors.amber, size: 36),
-                              Text('12,450',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildStat('Total Earned', '₹12,450',
+                        Icons.account_balance_wallet, Colors.green),
+                    _buildStat('Pending Payment', '₹2,450', Icons.pending,
+                        Colors.orange),
+                    _buildStat('Completed Gigs', '23', Icons.check_circle,
+                        Colors.blue),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                        child: _buildStatCard('Completed', '23',
-                            Icons.check_circle, Colors.green)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: _buildStatCard(
-                            'Active', '5', Icons.rocket_launch, Colors.orange)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Recent Transactions',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildTransaction(
-                  'Fill Survey', '₹150', 'Completed', Colors.green),
-              _buildTransaction(
-                  'Logo Design', '₹2,000', 'In Progress', Colors.orange),
-              _buildTransaction('Test App', '₹300', 'Completed', Colors.green),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  static Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
+  Widget _buildStat(String label, String value, IconData icon, Color color) {
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-                color: color.withOpacity(0.1), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 12),
-          Text(value,
-              style:
-                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          Text(label, style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  static Widget _buildTransaction(
-      String title, String amount, String status, Color color) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
         ],
       ),
       child: Row(
         children: [
-          Icon(status == 'Completed' ? Icons.check_circle : Icons.pending,
-              color: color),
-          const SizedBox(width: 12),
-          Expanded(
-              child: Text(title,
-                  style: const TextStyle(fontWeight: FontWeight.w600))),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(width: 16),
           Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(amount, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(status, style: TextStyle(fontSize: 11, color: color)),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              Text(
+                value,
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
         ],
@@ -820,126 +1000,108 @@ class EarningsScreen extends StatelessWidget {
   }
 }
 
-// PROFILE SCREEN
+// ================== PROFILE SCREEN ==================
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)]),
-                ),
-                child: const Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.person, size: 50, color: Colors.indigo),
-                    ),
-                    SizedBox(height: 16),
-                    Text('Rahul Sharma',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold)),
-                    Text('3rd Year • Computer Science',
-                        style: TextStyle(color: Colors.white70)),
-                    SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.star, color: Colors.amber, size: 18),
-                        SizedBox(width: 6),
-                        Text('4.8 (23 reviews)',
-                            style: TextStyle(color: Colors.white)),
-                      ],
-                    ),
-                  ],
-                ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(30),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.vertical(bottom: Radius.circular(30)),
               ),
-              const SizedBox(height: 24),
-              _buildStat('Total Earned', '₹12,450',
-                  Icons.account_balance_wallet, Colors.green),
-              _buildStat(
-                  'Completed Gigs', '23', Icons.check_circle, Colors.blue),
-              _buildStat(
-                  'Success Rate', '95%', Icons.trending_up, Colors.orange),
-              const SizedBox(height: 24),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Your Skills',
+              child: Column(
+                children: [
+                  const SizedBox(height: 30),
+                  const CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.indigo,
+                    child: Icon(Icons.person, size: 50, color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Student Name',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const Text('Computer Science • 3rd Year'),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber),
+                      const Text(' 4.8 (23 gigs)',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Skills',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    children: const [
+                      Chip(label: Text('Graphic Design')),
+                      Chip(label: Text('Video Edit')),
+                      Chip(label: Text('Python')),
+                      Chip(label: Text('Flutter')),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('Portfolio',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text('Portfolio items appear here',
+                          style: TextStyle(color: Colors.grey.shade600)),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const WelcomeScreen()),
+                          (route) => false,
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('Logout',
+                          style: TextStyle(color: Colors.red)),
+                    ),
+                  )
+                ],
               ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Wrap(
-                  spacing: 8,
-                  children: [
-                    'Graphic Design',
-                    'Video Editing',
-                    'Python',
-                    'Content Writing'
-                  ]
-                      .map((s) => Chip(
-                          label: Text(s),
-                          backgroundColor: Colors.indigo.shade50))
-                      .toList(),
-                ),
-              ),
-              const SizedBox(height: 30),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
-    );
-  }
-
-  static Widget _buildStat(
-      String label, String value, IconData icon, Color color) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: color, size: 28),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: const TextStyle(fontSize: 13, color: Colors.grey)),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ],
       ),
     );
   }
