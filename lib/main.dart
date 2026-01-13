@@ -43,6 +43,7 @@ class SideKickApp extends StatelessWidget {
   }
 }
 
+// Check if user is already logged in
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -52,7 +53,8 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          // In a real app, you should check the role in Firestore
+          // Default to Student MainScreen.
+          // (Real apps check 'users' collection for role to route correctly)
           return const MainScreen();
         }
         return const WelcomeScreen();
@@ -200,7 +202,7 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
-// ================== AUTH SCREEN (Updated with Name Input) ==================
+// ================== AUTH SCREEN (With Name Input) ==================
 class AuthScreen extends StatefulWidget {
   final String userType;
   const AuthScreen({super.key, required this.userType});
@@ -210,7 +212,7 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final _nameController = TextEditingController(); // Added Name Controller
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true;
@@ -238,7 +240,7 @@ class _AuthScreenState extends State<AuthScreen> {
           password: _passwordController.text.trim(),
         );
 
-        // Save initial user data with 0 balance
+        // Save initial user data
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userCredential.user!.uid)
@@ -247,7 +249,6 @@ class _AuthScreenState extends State<AuthScreen> {
           'email': _emailController.text.trim(),
           'role': widget.userType,
           'createdAt': Timestamp.now(),
-          // Initial Stats
           'balance': 0,
           'completedGigs': 0,
           'activeGigs': 0,
@@ -304,13 +305,11 @@ class _AuthScreenState extends State<AuthScreen> {
                 ? 'Welcome back!'
                 : 'Create an account to get started'),
             const SizedBox(height: 40),
-
-            // Show Name field only for Sign Up
             if (!_isLogin) ...[
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: 'Full Name',
+                  labelText: 'Full Name / Company Name',
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                   prefixIcon: const Icon(Icons.person),
@@ -318,7 +317,6 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: 20),
             ],
-
             TextField(
               controller: _emailController,
               decoration: InputDecoration(
@@ -473,14 +471,13 @@ class _HustleScreenState extends State<HustleScreen> {
         return;
       }
 
-      // Save Application with status 'Pending'
       await FirebaseFirestore.instance.collection('applications').add({
         'gigId': gigId,
         'gigTitle': gig['title'],
         'employerId': gig['employerId'],
         'applicantId': user.uid,
         'applicantEmail': user.email ?? 'Unknown',
-        'pay': gig['pay'], // Save the pay amount here so we can add it later
+        'pay': gig['pay'],
         'status': 'Pending',
         'appliedAt': Timestamp.now(),
       });
@@ -513,7 +510,8 @@ class _HustleScreenState extends State<HustleScreen> {
                     .where('type',
                         isEqualTo:
                             _showQuickTasks ? 'Quick Task' : 'Skilled Project')
-                    // .orderBy('createdAt', descending: true) // Create index in Firebase Console to use this
+                    // Uncomment line below ONLY after creating index
+                    // .orderBy('createdAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -754,7 +752,7 @@ class _HustleScreenState extends State<HustleScreen> {
   }
 }
 
-// ================== EARNINGS SCREEN (Dynamic Data) ==================
+// ================== EARNINGS SCREEN ==================
 class EarningsScreen extends StatelessWidget {
   const EarningsScreen({super.key});
 
@@ -860,7 +858,6 @@ class EarningsScreen extends StatelessWidget {
                               fontSize: 18, fontWeight: FontWeight.bold))),
                 ),
 
-                // Fetch transactions from subcollection
                 StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('users')
@@ -948,7 +945,7 @@ class EarningsScreen extends StatelessWidget {
   }
 }
 
-// ================== PROFILE SCREEN (Dynamic Data) ==================
+// ================== PROFILE SCREEN ==================
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -977,7 +974,6 @@ class ProfileScreen extends StatelessWidget {
           body: SingleChildScrollView(
             child: Column(
               children: [
-                // Header
                 Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
@@ -1009,8 +1005,6 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Stats Overlap
                 Transform.translate(
                   offset: const Offset(0, -20),
                   child: Padding(
@@ -1026,8 +1020,6 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Logout
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: SizedBox(
@@ -1239,7 +1231,7 @@ class EmployerDashboard extends StatelessWidget {
   }
 }
 
-// ================== APPLICANTS SCREEN (With Payment Logic) ==================
+// ================== APPLICANTS SCREEN ==================
 class ApplicantsScreen extends StatelessWidget {
   final String gigId;
   final String gigTitle;
@@ -1250,13 +1242,10 @@ class ApplicantsScreen extends StatelessWidget {
   Future<void> _hireAndPay(BuildContext context, String applicationId,
       String studentId, int payAmount) async {
     try {
-      // 1. Update Application status to Hired/Completed
       await FirebaseFirestore.instance
           .collection('applications')
           .doc(applicationId)
           .update({'status': 'Hired & Paid'});
-
-      // 2. Add Money to Student Balance
       await FirebaseFirestore.instance
           .collection('users')
           .doc(studentId)
@@ -1264,8 +1253,6 @@ class ApplicantsScreen extends StatelessWidget {
         'balance': FieldValue.increment(payAmount),
         'completedGigs': FieldValue.increment(1),
       });
-
-      // 3. Create Transaction Record for Student
       await FirebaseFirestore.instance
           .collection('users')
           .doc(studentId)
@@ -1275,7 +1262,6 @@ class ApplicantsScreen extends StatelessWidget {
         'amount': payAmount,
         'date': Timestamp.now(),
       });
-
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Student Hired & Paid Successfully!'),
           backgroundColor: Colors.green));
@@ -1488,23 +1474,216 @@ class _PostGigScreenState extends State<PostGigScreen> {
   }
 }
 
+// ================== EMPLOYER PROFILE SCREEN ==================
 class EmployerProfileScreen extends StatelessWidget {
   const EmployerProfileScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            await FirebaseAuth.instance.signOut();
-            if (!context.mounted) return;
-            Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-                (route) => false);
-          },
-          child: const Text("Logout"),
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Center(child: Text("Please Login"));
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
+
+        final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final companyName = data['name'] ?? 'Company Name';
+        final email = data['email'] ?? '';
+        final hires = data['completedGigs'] ?? 0;
+        final activeJobs = data['activeGigs'] ?? 0;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F5F5),
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                        colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)]),
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 20, bottom: 40),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle),
+                            child: const CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Colors.white,
+                                child: Icon(Icons.business,
+                                    size: 50, color: Colors.indigo)),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(companyName,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text(email,
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 14)),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                                border:
+                                    Border.all(color: Colors.green.shade200)),
+                            child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.verified,
+                                      color: Colors.white, size: 16),
+                                  SizedBox(width: 4),
+                                  Text('Verified Business',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold))
+                                ]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Stats Overlap
+                Transform.translate(
+                  offset: const Offset(0, -20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                            child: _buildInfoCard('Active Jobs', '$activeJobs',
+                                Icons.work, Colors.blue)),
+                        const SizedBox(width: 16),
+                        Expanded(
+                            child: _buildInfoCard('Total Hires', '$hires',
+                                Icons.people_alt, Colors.green)),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Menu Options
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      _buildMenuTile(
+                          Icons.edit, 'Company Details', 'Manage your profile'),
+                      _buildMenuTile(
+                          Icons.payment, 'Payment Methods', 'Visa **42'),
+                      _buildMenuTile(
+                          Icons.support_agent, 'Support', 'Get help'),
+
+                      const SizedBox(height: 30),
+
+                      // Logout
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            await FirebaseAuth.instance.signOut();
+                            if (!context.mounted) return;
+                            Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const WelcomeScreen()),
+                                (route) => false);
+                          },
+                          icon: const Icon(Icons.logout, color: Colors.white),
+                          label: const Text('Logout',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 16)),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12))),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoCard(
+      String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+          ]),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 12),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          Text(title,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuTile(IconData icon, String title, String subtitle) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 5)
+          ]),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, color: Colors.indigo),
         ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle),
+        trailing:
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        onTap: () {},
       ),
     );
   }
