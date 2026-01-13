@@ -5,7 +5,7 @@ void main() {
 }
 
 class SideKickApp extends StatelessWidget {
-  const SideKickApp({Key? key}) : super(key: key);
+  const SideKickApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,9 +13,12 @@ class SideKickApp extends StatelessWidget {
       title: 'SideKick',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        scaffoldBackgroundColor: Colors.grey[50],
-        fontFamily: 'Roboto',
+        primarySwatch: Colors.indigo,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.indigo,
+          secondary: Colors.amber,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       ),
       home: const MainScreen(),
     );
@@ -23,7 +26,7 @@ class SideKickApp extends StatelessWidget {
 }
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({Key? key}) : super(key: key);
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -33,9 +36,8 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const HomeScreen(),
-    const MyGigsScreen(),
-    const PostGigScreen(),
+    const HustleScreen(),
+    const EarningsScreen(),
     const ProfileScreen(),
   ];
 
@@ -43,77 +45,373 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.deepPurple,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.work), label: 'My Gigs'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: 'Post'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 20,
+              color: Colors.black.withOpacity(0.1),
+            )
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.rocket_launch, 'Hustle', 0),
+                _buildNavItem(Icons.account_balance_wallet, 'Earnings', 1),
+                _buildNavItem(Icons.person, 'Profile', 2),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.indigo : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+              size: 24,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// HOME SCREEN
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+// HUSTLE SCREEN
+class HustleScreen extends StatefulWidget {
+  const HustleScreen({super.key});
+
+  @override
+  State<HustleScreen> createState() => _HustleScreenState();
+}
+
+class _HustleScreenState extends State<HustleScreen> {
+  bool _showQuickTasks = true;
+
+  final List<Map<String, dynamic>> _quickTasks = [
+    {
+      'title': 'Fill Market Survey',
+      'description': 'Quick 15-question survey about student preferences',
+      'pay': 150,
+      'duration': '15 min',
+      'difficulty': 'Easy',
+      'category': 'Survey',
+      'color': Colors.green,
+    },
+    {
+      'title': 'Test New Food App',
+      'description': 'Browse app, place test order, report bugs',
+      'pay': 300,
+      'duration': '45 min',
+      'difficulty': 'Easy',
+      'category': 'Testing',
+      'color': Colors.blue,
+    },
+    {
+      'title': 'Transcribe Audio',
+      'description': 'Convert 30min lecture audio to text',
+      'pay': 250,
+      'duration': '1 hr',
+      'difficulty': 'Medium',
+      'category': 'Transcription',
+      'color': Colors.orange,
+    },
+  ];
+
+  final List<Map<String, dynamic>> _skilledGigs = [
+    {
+      'title': 'Instagram Content - Café Launch',
+      'description': 'Create 10 creative posts for new café opening',
+      'pay': 1500,
+      'duration': '3 days',
+      'postedBy': 'Brew & Chill Café',
+      'skills': ['Graphic Design', 'Canva', 'Social Media'],
+    },
+    {
+      'title': 'Modern Logo Design',
+      'description': 'Design minimal, modern logo for tech startup',
+      'pay': 2000,
+      'duration': '5 days',
+      'postedBy': 'TechStart Solutions',
+      'skills': ['Illustrator', 'Branding'],
+    },
+    {
+      'title': 'Landing Page Development',
+      'description': 'Responsive landing page with animations',
+      'pay': 3500,
+      'duration': '1 week',
+      'postedBy': 'Digital Marketing Co.',
+      'skills': ['HTML/CSS', 'JavaScript'],
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.deepPurple, Colors.deepPurple.shade300],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Ready to Hustle?',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Pick your next gig',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.notifications,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bolt, color: Colors.amber, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          '5 new gigs today',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Toggle Buttons
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
                   children: [
-                    const Text(
-                      'Welcome back, Rahul!',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _showQuickTasks = true),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: _showQuickTasks
+                                ? Colors.indigo
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.flash_on,
+                                color: _showQuickTasks
+                                    ? Colors.amber
+                                    : Colors.grey.shade600,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Quick Tasks',
+                                style: TextStyle(
+                                  color: _showQuickTasks
+                                      ? Colors.white
+                                      : Colors.grey.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _showQuickTasks = false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: !_showQuickTasks
+                                ? Colors.indigo
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.workspace_premium,
+                                color: !_showQuickTasks
+                                    ? Colors.amber
+                                    : Colors.grey.shade600,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Skill Gigs',
+                                style: TextStyle(
+                                  color: !_showQuickTasks
+                                      ? Colors.white
+                                      : Colors.grey.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: _showQuickTasks ? _buildQuickTasks() : _buildSkilledGigs(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickTasks() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: _quickTasks.length,
+      itemBuilder: (context, index) {
+        final task = _quickTasks[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
+                        color: (task['color'] as Color).withOpacity(0.1),
+                        shape: BoxShape.circle,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.account_balance_wallet,
-                              color: Colors.white),
-                          SizedBox(width: 8),
+                      child: Icon(
+                        Icons.bolt,
+                        color: task['color'],
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            'Total Earned: ₹2,450',
-                            style: TextStyle(
-                              color: Colors.white,
+                            task['title'],
+                            style: const TextStyle(
                               fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            task['category'],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: task['color'],
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -122,638 +420,252 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Quick Cash Section
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  '⚡ Quick Cash (Earn Today)',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 180,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  children: const [
-                    QuickTaskCard(
-                      title: 'Fill Survey',
-                      pay: '₹150',
-                      duration: '20 min',
-                      difficulty: 'Easy',
-                      icon: Icons.poll,
-                      color: Colors.green,
-                    ),
-                    QuickTaskCard(
-                      title: 'Test New App',
-                      pay: '₹300',
-                      duration: '1 hr',
-                      difficulty: 'Easy',
-                      icon: Icons.phone_android,
-                      color: Colors.blue,
-                    ),
-                    QuickTaskCard(
-                      title: 'Transcribe Audio',
-                      pay: '₹200',
-                      duration: '45 min',
-                      difficulty: 'Medium',
-                      icon: Icons.headphones,
-                      color: Colors.orange,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              // Skilled Gigs Section
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  '🎨 Skilled Gigs (Build Portfolio)',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const SkilledGigCard(
-                title: 'Instagram Posts for Café',
-                description: 'Need 10 creative posts for new café launch',
-                pay: '₹1,500',
-                duration: '3 days',
-                skills: ['Graphic Design', 'Canva'],
-                postedBy: 'Brew & Chill Café',
-              ),
-              const SkilledGigCard(
-                title: 'Logo Design',
-                description: 'Modern logo for tech startup',
-                pay: '₹2,000',
-                duration: '5 days',
-                skills: ['Illustrator', 'Branding'],
-                postedBy: 'TechStart Solutions',
-              ),
-              const SkilledGigCard(
-                title: 'Website Landing Page',
-                description: 'Responsive landing page with animations',
-                pay: '₹3,500',
-                duration: '1 week',
-                skills: ['HTML/CSS', 'JavaScript'],
-                postedBy: 'Digital Marketing Co.',
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Quick Task Card Widget
-class QuickTaskCard extends StatelessWidget {
-  final String title, pay, duration, difficulty;
-  final IconData icon;
-  final Color color;
-
-  const QuickTaskCard({
-    Key? key,
-    required this.title,
-    required this.pay,
-    required this.duration,
-    required this.difficulty,
-    required this.icon,
-    required this.color,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Applied for $title!'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 28),
-                ),
                 const SizedBox(height: 12),
                 Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  pay,
+                  task['description'],
                   style: TextStyle(
-                    color: color,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                    fontSize: 14,
+                    height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$duration • $difficulty',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Skilled Gig Card Widget
-class SkilledGigCard extends StatelessWidget {
-  final String title, description, pay, duration, postedBy;
-  final List<String> skills;
-
-  const SkilledGigCard({
-    Key? key,
-    required this.title,
-    required this.description,
-    required this.pay,
-    required this.duration,
-    required this.skills,
-    required this.postedBy,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text(title),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(description),
-                    const SizedBox(height: 16),
-                    Text('Budget: $pay',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text('Duration: $duration'),
-                    const SizedBox(height: 8),
-                    const Text('Required Skills:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    ...skills.map((s) => Text('• $s')),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Application submitted!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    },
-                    child: const Text('Apply Now'),
-                  ),
-                ],
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+                const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                          horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.deepPurple.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
-                        pay,
-                        style: const TextStyle(
-                          color: Colors.deepPurple,
-                          fontWeight: FontWeight.bold,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.currency_rupee,
+                              color: Colors.amber, size: 18),
+                          Text(
+                            '${task['pay']}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.timer, size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(task['duration'],
+                        style: TextStyle(color: Colors.grey.shade600)),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Applied for ${task['title']}!'),
+                            backgroundColor: Colors.green,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
+                      child: const Text('Apply',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontSize: 14,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSkilledGigs() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: _skilledGigs.length,
+      itemBuilder: (context, index) {
+        final gig = _skilledGigs[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(24)),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: skills
-                      .map((skill) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+                  builder: (context) => Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          gig['title'],
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(gig['postedBy'],
+                            style: TextStyle(color: Colors.grey.shade600)),
+                        const SizedBox(height: 16),
+                        Text(gig['description'],
+                            style: const TextStyle(fontSize: 15)),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            const Text('Budget: ',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('₹${gig['pay']}',
+                                style: const TextStyle(
+                                    color: Colors.amber,
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 20),
+                            const Text('Duration: ',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(gig['duration']),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('Skills:',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: (gig['skills'] as List<String>)
+                              .map((s) => Chip(
+                                  label: Text(s),
+                                  backgroundColor: Colors.indigo.shade50))
+                              .toList(),
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Application submitted!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.indigo,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              skill,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.blue,
-                              ),
-                            ),
-                          ))
-                      .toList(),
-                ),
-                const SizedBox(height: 12),
-                Row(
+                            child: const Text('Apply Now',
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.business, size: 14, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Text(
-                      postedBy,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.workspace_premium,
+                              color: Colors.indigo),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            gig['title'],
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Text(
+                          '₹${gig['pay']}',
+                          style: const TextStyle(
+                            color: Colors.amber,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
-                    const Spacer(),
-                    Icon(Icons.timer, size: 14, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
+                    const SizedBox(height: 8),
                     Text(
-                      duration,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      gig['description'],
+                      style:
+                          TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.business,
+                            size: 12, color: Colors.grey.shade600),
+                        const SizedBox(width: 4),
+                        Text(gig['postedBy'],
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade600)),
+                        const SizedBox(width: 12),
+                        Icon(Icons.timer,
+                            size: 12, color: Colors.grey.shade600),
+                        const SizedBox(width: 4),
+                        Text(gig['duration'],
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade600)),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-// MY GIGS SCREEN
-class MyGigsScreen extends StatelessWidget {
-  const MyGigsScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Gigs'),
-        backgroundColor: Colors.deepPurple,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildStatusCard('Active', 3, Colors.blue),
-          _buildStatusCard('Completed', 12, Colors.green),
-          _buildStatusCard('In Review', 2, Colors.orange),
-          const SizedBox(height: 20),
-          const Text(
-            'Recent Activity',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          _buildActivityItem('Fill Survey', '₹150', 'Completed', Colors.green),
-          _buildActivityItem(
-              'Logo Design', '₹2,000', 'In Progress', Colors.orange),
-          _buildActivityItem('Test App', '₹300', 'Completed', Colors.green),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusCard(String label, int count, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActivityItem(
-      String title, String amount, String status, Color statusColor) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  status,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            amount,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// POST GIG SCREEN
-class PostGigScreen extends StatefulWidget {
-  const PostGigScreen({Key? key}) : super(key: key);
-
-  @override
-  State<PostGigScreen> createState() => _PostGigScreenState();
-}
-
-class _PostGigScreenState extends State<PostGigScreen> {
-  String _gigType = 'Quick Task';
-  final _titleController = TextEditingController();
-  final _descController = TextEditingController();
-  final _budgetController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Post a Gig'),
-        backgroundColor: Colors.deepPurple,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Gig Type',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildTypeButton('Quick Task'),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildTypeButton('Skilled Project'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _descController,
-              decoration: InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              maxLines: 4,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _budgetController,
-              decoration: InputDecoration(
-                labelText: 'Budget (₹)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                prefixText: '₹ ',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (_titleController.text.isNotEmpty &&
-                      _budgetController.text.isNotEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Gig posted successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    _titleController.clear();
-                    _descController.clear();
-                    _budgetController.clear();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Post Gig',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeButton(String type) {
-    final isSelected = _gigType == type;
-    return GestureDetector(
-      onTap: () => setState(() => _gigType = type),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.deepPurple : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Colors.deepPurple : Colors.grey.shade300,
-            width: 2,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            type,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// PROFILE SCREEN
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+// EARNINGS SCREEN
+class EarningsScreen extends StatelessWidget {
+  const EarningsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -764,81 +676,210 @@ class ProfileScreen extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.deepPurple, Colors.deepPurple.shade300],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)],
                   ),
                 ),
                 child: Column(
                   children: [
-                    const CircleAvatar(
+                    const Text(
+                      'Your Earnings',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Column(
+                        children: [
+                          Text('Total Earned',
+                              style: TextStyle(color: Colors.white70)),
+                          SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.currency_rupee,
+                                  color: Colors.amber, size: 36),
+                              Text('12,450',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 48,
+                                      fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                        child: _buildStatCard('Completed', '23',
+                            Icons.check_circle, Colors.green)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: _buildStatCard(
+                            'Active', '5', Icons.rocket_launch, Colors.orange)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Recent Transactions',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildTransaction(
+                  'Fill Survey', '₹150', 'Completed', Colors.green),
+              _buildTransaction(
+                  'Logo Design', '₹2,000', 'In Progress', Colors.orange),
+              _buildTransaction('Test App', '₹300', 'Completed', Colors.green),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+                color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 12),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  static Widget _buildTransaction(
+      String title, String amount, String status, Color color) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(status == 'Completed' ? Icons.check_circle : Icons.pending,
+              color: color),
+          const SizedBox(width: 12),
+          Expanded(
+              child: Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.w600))),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(amount, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(status, style: TextStyle(fontSize: 11, color: color)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// PROFILE SCREEN
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                      colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)]),
+                ),
+                child: const Column(
+                  children: [
+                    CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.white,
-                      child: Icon(Icons.person,
-                          size: 50, color: Colors.deepPurple),
+                      child: Icon(Icons.person, size: 50, color: Colors.indigo),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Rahul Sharma',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '3rd Year • Computer Science',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
+                    Text('Rahul Sharma',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold)),
+                    Text('3rd Year • Computer Science',
+                        style: TextStyle(color: Colors.white70)),
+                    SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.star, color: Colors.amber, size: 20),
-                        SizedBox(width: 4),
-                        Text(
-                          '4.8',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          '(23 gigs)',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
-                        ),
+                      children: [
+                        Icon(Icons.star, color: Colors.amber, size: 18),
+                        SizedBox(width: 6),
+                        Text('4.8 (23 reviews)',
+                            style: TextStyle(color: Colors.white)),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              _buildStatCard('Total Earned', '₹12,450',
+              const SizedBox(height: 24),
+              _buildStat('Total Earned', '₹12,450',
                   Icons.account_balance_wallet, Colors.green),
-              _buildStatCard(
+              _buildStat(
                   'Completed Gigs', '23', Icons.check_circle, Colors.blue),
-              _buildStatCard(
+              _buildStat(
                   'Success Rate', '95%', Icons.trending_up, Colors.orange),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Skills',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  child: Text('Your Skills',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -846,19 +887,15 @@ class ProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Wrap(
                   spacing: 8,
-                  runSpacing: 8,
                   children: [
                     'Graphic Design',
                     'Video Editing',
                     'Python',
-                    'Content Writing',
+                    'Content Writing'
                   ]
-                      .map((skill) => Chip(
-                            label: Text(skill),
-                            backgroundColor: Colors.deepPurple.withOpacity(0.1),
-                            labelStyle:
-                                const TextStyle(color: Colors.deepPurple),
-                          ))
+                      .map((s) => Chip(
+                          label: Text(s),
+                          backgroundColor: Colors.indigo.shade50))
                       .toList(),
                 ),
               ),
@@ -870,19 +907,16 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(
+  static Widget _buildStat(
       String label, String value, IconData icon, Color color) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
         ],
       ),
       child: Row(
@@ -890,33 +924,20 @@ class ProfileScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color),
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 28),
           ),
           const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(fontSize: 13, color: Colors.grey)),
+              Text(value,
                   style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+                      fontSize: 20, fontWeight: FontWeight.bold)),
+            ],
           ),
         ],
       ),
