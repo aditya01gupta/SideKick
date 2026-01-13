@@ -26,7 +26,10 @@ class SideKickApp extends StatelessWidget {
   }
 }
 
-// ================== WELCOME SCREEN ==================
+// =============================================================================
+// 1. WELCOME & LOGIN SCREENS
+// =============================================================================
+
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
@@ -187,7 +190,6 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
-// ================== LOGIN SCREEN ==================
 class LoginScreen extends StatelessWidget {
   final String userType;
   const LoginScreen({super.key, required this.userType});
@@ -240,7 +242,6 @@ class LoginScreen extends StatelessWidget {
               height: 55,
               child: ElevatedButton(
                 onPressed: () {
-                  // If student, go to MainScreen. If employer, placeholder.
                   if (userType == 'student') {
                     Navigator.pushAndRemoveUntil(
                       context,
@@ -249,9 +250,11 @@ class LoginScreen extends StatelessWidget {
                       (route) => false,
                     );
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Employer Dashboard coming soon!')),
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const EmployerMainScreen()),
+                      (route) => false,
                     );
                   }
                 },
@@ -273,7 +276,10 @@ class LoginScreen extends StatelessWidget {
   }
 }
 
-// ================== STUDENT MAIN SCREEN ==================
+// =============================================================================
+// 2. STUDENT SIDE SCREENS
+// =============================================================================
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -356,7 +362,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ================== HUSTLE SCREEN (GIGS) ==================
 class HustleScreen extends StatefulWidget {
   const HustleScreen({super.key});
 
@@ -912,7 +917,6 @@ class _HustleScreenState extends State<HustleScreen> {
   }
 }
 
-// ================== EARNINGS SCREEN ==================
 class EarningsScreen extends StatelessWidget {
   const EarningsScreen({super.key});
 
@@ -1000,7 +1004,6 @@ class EarningsScreen extends StatelessWidget {
   }
 }
 
-// ================== PROFILE SCREEN ==================
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -1103,6 +1106,481 @@ class ProfileScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// =============================================================================
+// 3. EMPLOYER SIDE SCREENS
+// =============================================================================
+
+class EmployerMainScreen extends StatefulWidget {
+  const EmployerMainScreen({super.key});
+
+  @override
+  State<EmployerMainScreen> createState() => _EmployerMainScreenState();
+}
+
+class _EmployerMainScreenState extends State<EmployerMainScreen> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    const EmployerDashboard(),
+    const PostGigScreen(),
+    const EmployerProfileScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 20,
+              color: Colors.black.withOpacity(0.1),
+            )
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.dashboard, 'Dashboard', 0),
+                _buildNavItem(Icons.add_circle, 'Post Job', 1),
+                _buildNavItem(Icons.business, 'Company', 2),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.indigo : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+              size: 24,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Global list to simulate data persistence for the prototype
+List<Map<String, dynamic>> globalPostedGigs = [
+  {
+    'title': 'Logo Design for Cafe',
+    'type': 'Skilled Project',
+    'applicants': 12,
+    'status': 'Active',
+    'pay': 2000,
+  },
+  {
+    'title': 'App Testing - Beta',
+    'type': 'Quick Task',
+    'applicants': 45,
+    'status': 'Closed',
+    'pay': 300,
+  },
+];
+
+class EmployerDashboard extends StatefulWidget {
+  const EmployerDashboard({super.key});
+
+  @override
+  State<EmployerDashboard> createState() => _EmployerDashboardState();
+}
+
+class _EmployerDashboardState extends State<EmployerDashboard> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title:
+            const Text('My Posted Gigs', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.indigo,
+        automaticallyImplyLeading: false,
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(20),
+        itemCount: globalPostedGigs.length,
+        itemBuilder: (context, index) {
+          final gig = globalPostedGigs[index];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: gig['type'] == 'Quick Task'
+                            ? Colors.orange.withOpacity(0.1)
+                            : Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        gig['type'],
+                        style: TextStyle(
+                          color: gig['type'] == 'Quick Task'
+                              ? Colors.orange
+                              : Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      gig['status'],
+                      style: TextStyle(
+                        color: gig['status'] == 'Active'
+                            ? Colors.green
+                            : Colors.grey,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  gig['title'],
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    _buildStatBadge(Icons.people,
+                        '${gig['applicants']} Applicants', Colors.indigo),
+                    const SizedBox(width: 12),
+                    _buildStatBadge(
+                        Icons.currency_rupee, '₹${gig['pay']}', Colors.amber),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatBadge(IconData icon, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PostGigScreen extends StatefulWidget {
+  const PostGigScreen({super.key});
+
+  @override
+  State<PostGigScreen> createState() => _PostGigScreenState();
+}
+
+class _PostGigScreenState extends State<PostGigScreen> {
+  String _selectedType = 'Quick Task';
+  final _titleController = TextEditingController();
+  final _budgetController = TextEditingController();
+  final _descController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title:
+            const Text('Post New Gig', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.indigo,
+        automaticallyImplyLeading: false,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Job Type',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTypeSelector('Quick Task', Icons.flash_on),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildTypeSelector(
+                      'Skilled Project', Icons.workspace_premium),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _buildTextField('Job Title', 'e.g., Logo Design', _titleController),
+            const SizedBox(height: 16),
+            _buildTextField('Budget (₹)', 'e.g., 2000', _budgetController,
+                isNumber: true),
+            const SizedBox(height: 16),
+            _buildTextField('Description & Requirements',
+                'Describe what you need...', _descController,
+                maxLines: 5),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_titleController.text.isNotEmpty &&
+                      _budgetController.text.isNotEmpty) {
+                    setState(() {
+                      // Add to the global list to simulate persistence
+                      globalPostedGigs.insert(0, {
+                        'title': _titleController.text,
+                        'type': _selectedType,
+                        'applicants': 0,
+                        'status': 'Active',
+                        'pay': int.tryParse(_budgetController.text) ?? 0,
+                      });
+                    });
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Gig Posted Successfully!'),
+                          backgroundColor: Colors.green),
+                    );
+
+                    // Clear fields
+                    _titleController.clear();
+                    _budgetController.clear();
+                    _descController.clear();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Post Gig',
+                    style: TextStyle(fontSize: 18, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      String label, String hint, TextEditingController controller,
+      {bool isNumber = false, int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: Colors.white,
+            // FIXED: contentPadding moved to InputDecoration
+            contentPadding: const EdgeInsets.all(16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTypeSelector(String type, IconData icon) {
+    final isSelected = _selectedType == type;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedType = type),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.indigo : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: isSelected ? Colors.indigo : Colors.grey.shade300),
+        ),
+        child: Column(
+          children: [
+            Icon(icon,
+                color: isSelected ? Colors.amber : Colors.grey, size: 30),
+            const SizedBox(height: 8),
+            Text(
+              type,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class EmployerProfileScreen extends StatelessWidget {
+  const EmployerProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(30),
+              child: Column(
+                children: [
+                  const CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.indigo,
+                    child: Icon(Icons.business, size: 50, color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'TechStart Solutions',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const Text('Verified Business'),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStat('Active', '3'),
+                      _buildStat('Hired', '142'),
+                      _buildStat('Rating', '4.9'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.payment, color: Colors.indigo),
+              title: const Text('Payment Methods'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {},
+            ),
+            ListTile(
+              leading: const Icon(Icons.verified_user, color: Colors.indigo),
+              title: const Text('Company Verification'),
+              trailing: const Icon(Icons.check_circle, color: Colors.green),
+              onTap: () {},
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const WelcomeScreen()),
+                      (route) => false,
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child:
+                      const Text('Logout', style: TextStyle(color: Colors.red)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStat(String label, String value) {
+    return Column(
+      children: [
+        Text(value,
+            style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo)),
+        Text(label,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+      ],
     );
   }
 }
