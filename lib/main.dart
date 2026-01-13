@@ -54,8 +54,8 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          // Simplified logic: Direct to Student Main Screen by default for demo
-          // In a real app, you'd check Firestore to see if user is student or employer
+          // For prototype simplicity, default to Student MainScreen.
+          // Real apps would check the 'users' collection for the role.
           return const MainScreen();
         }
         return const WelcomeScreen();
@@ -415,7 +415,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ================== HUSTLE SCREEN (Reads from Firebase) ==================
+// ================== HUSTLE SCREEN (With Apply Functionality) ==================
 class HustleScreen extends StatefulWidget {
   const HustleScreen({super.key});
 
@@ -425,6 +425,55 @@ class HustleScreen extends StatefulWidget {
 
 class _HustleScreenState extends State<HustleScreen> {
   bool _showQuickTasks = true;
+
+  // --- THE APPLY FUNCTION ---
+  Future<void> _applyForGig(Map<String, dynamic> gig, String gigId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please login to apply')));
+      return;
+    }
+
+    try {
+      // 1. Check if already applied
+      final existing = await FirebaseFirestore.instance
+          .collection('applications')
+          .where('gigId', isEqualTo: gigId)
+          .where('applicantId', isEqualTo: user.uid)
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('You have already applied!')));
+        return;
+      }
+
+      // 2. Save Application
+      await FirebaseFirestore.instance.collection('applications').add({
+        'gigId': gigId,
+        'gigTitle': gig['title'],
+        'employerId': gig['employerId'],
+        'applicantId': user.uid,
+        'applicantEmail': user.email ?? 'Unknown',
+        'status': 'Pending',
+        'appliedAt': Timestamp.now(),
+      });
+
+      // 3. Update Applicant Count
+      await FirebaseFirestore.instance.collection('gigs').doc(gigId).update({
+        'applicantCount': FieldValue.increment(1),
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Application Sent!'), backgroundColor: Colors.green));
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -441,7 +490,6 @@ class _HustleScreenState extends State<HustleScreen> {
                     .where('type',
                         isEqualTo:
                             _showQuickTasks ? 'Quick Task' : 'Skilled Project')
-                    .orderBy('createdAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -458,10 +506,13 @@ class _HustleScreenState extends State<HustleScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: gigs.length,
                     itemBuilder: (context, index) {
-                      final gig = gigs[index].data() as Map<String, dynamic>;
+                      final doc = gigs[index];
+                      final gig = doc.data() as Map<String, dynamic>;
+                      final gigId = doc.id;
+                      // Pass gigId to builders
                       return _showQuickTasks
-                          ? _buildQuickTaskItem(gig)
-                          : _buildSkilledGigItem(gig);
+                          ? _buildQuickTaskItem(gig, gigId)
+                          : _buildSkilledGigItem(gig, gigId);
                     },
                   );
                 },
@@ -567,7 +618,7 @@ class _HustleScreenState extends State<HustleScreen> {
     );
   }
 
-  Widget _buildQuickTaskItem(Map<String, dynamic> task) {
+  Widget _buildQuickTaskItem(Map<String, dynamic> task, String gigId) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -608,7 +659,7 @@ class _HustleScreenState extends State<HustleScreen> {
                         fontWeight: FontWeight.bold,
                         color: Colors.amber)),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () => _applyForGig(task, gigId),
                   style:
                       ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
                   child: const Text('Apply',
@@ -622,7 +673,7 @@ class _HustleScreenState extends State<HustleScreen> {
     );
   }
 
-  Widget _buildSkilledGigItem(Map<String, dynamic> gig) {
+  Widget _buildSkilledGigItem(Map<String, dynamic> gig, String gigId) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -650,8 +701,24 @@ class _HustleScreenState extends State<HustleScreen> {
                 style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                 maxLines: 2),
             const SizedBox(height: 12),
-            Text('Posted by: ${gig['postedBy'] ?? 'Unknown'}',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Posted by: ${gig['postedBy'] ?? 'Unknown'}',
+                    style:
+                        TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                ElevatedButton(
+                  onPressed: () => _applyForGig(gig, gigId),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    minimumSize: const Size(80, 36),
+                  ),
+                  child: const Text('Apply',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -728,7 +795,7 @@ class _EmployerMainScreenState extends State<EmployerMainScreen> {
   }
 }
 
-// ================== EMPLOYER DASHBOARD (Reads User's Gigs) ==================
+// ================== EMPLOYER DASHBOARD (Navigates to Applicants) ==================
 class EmployerDashboard extends StatelessWidget {
   const EmployerDashboard({super.key});
 
@@ -758,28 +825,77 @@ class EmployerDashboard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              final gig =
-                  snapshot.data!.docs[index].data() as Map<String, dynamic>;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.05), blurRadius: 10)
-                    ]),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(gig['title'],
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Text('Type: ${gig['type']}'),
-                    Text('Pay: ₹${gig['pay']}'),
-                  ],
+              final doc = snapshot.data!.docs[index];
+              final gig = doc.data() as Map<String, dynamic>;
+              final gigId = doc.id;
+
+              // Tap card to see applicants
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ApplicantsScreen(
+                          gigId: gigId, gigTitle: gig['title']),
+                    ),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10)
+                      ]),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                              child: Text(gig['title'],
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold))),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8)),
+                            child: const Text('Active',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.green)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Type: ${gig['type']}'),
+                      Text('Pay: ₹${gig['pay']}'),
+                      const Divider(height: 20),
+                      Row(
+                        children: [
+                          const Icon(Icons.people,
+                              size: 16, color: Colors.indigo),
+                          const SizedBox(width: 8),
+                          // Display Applicant Count
+                          Text('${gig['applicantCount'] ?? 0} Applicants',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.indigo)),
+                          const Spacer(),
+                          const Text('Tap to view',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -790,7 +906,93 @@ class EmployerDashboard extends StatelessWidget {
   }
 }
 
-// ================== POST GIG SCREEN (Writes to Firebase) ==================
+// ================== APPLICANTS SCREEN (Employer View) ==================
+class ApplicantsScreen extends StatelessWidget {
+  final String gigId;
+  final String gigTitle;
+
+  const ApplicantsScreen(
+      {super.key, required this.gigId, required this.gigTitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(gigTitle, style: const TextStyle(fontSize: 16)),
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('applications')
+            .where('gigId', isEqualTo: gigId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No applicants yet.'));
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              final doc = snapshot.data!.docs[index];
+              final app = doc.data() as Map<String, dynamic>;
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.indigo.shade100,
+                    child: const Icon(Icons.person, color: Colors.indigo),
+                  ),
+                  title: Text(app['applicantEmail'] ?? 'Unknown Applicant'),
+                  subtitle: Text('Status: ${app['status']}'),
+                  trailing: app['status'] == 'Pending'
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.check_circle,
+                                  color: Colors.green),
+                              onPressed: () {
+                                FirebaseFirestore.instance
+                                    .collection('applications')
+                                    .doc(doc.id)
+                                    .update({'status': 'Hired'});
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.cancel, color: Colors.red),
+                              onPressed: () {
+                                FirebaseFirestore.instance
+                                    .collection('applications')
+                                    .doc(doc.id)
+                                    .update({'status': 'Rejected'});
+                              },
+                            ),
+                          ],
+                        )
+                      : Icon(
+                          app['status'] == 'Hired' ? Icons.check : Icons.close,
+                          color: app['status'] == 'Hired'
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ================== POST GIG SCREEN ==================
 class PostGigScreen extends StatefulWidget {
   const PostGigScreen({super.key});
 
@@ -818,9 +1020,10 @@ class _PostGigScreenState extends State<PostGigScreen> {
         'description': _descController.text.trim(),
         'type': _selectedType,
         'employerId': user?.uid,
-        'postedBy': user?.email, // In real app, fetch display name
+        'postedBy': user?.email,
         'createdAt': Timestamp.now(),
         'status': 'Active',
+        'applicantCount': 0, // Initialize count
       });
 
       if (!mounted) return;
