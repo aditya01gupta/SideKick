@@ -6,7 +6,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // IMPORTANT: Ensure you have initialized Firebase in main()
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   // WEB CONFIGURATION
   await Firebase.initializeApp(
     options: const FirebaseOptions(
@@ -44,7 +43,6 @@ class SideKickApp extends StatelessWidget {
   }
 }
 
-// Check if user is already logged in
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -54,8 +52,7 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          // For prototype simplicity, default to Student MainScreen.
-          // Real apps would check the 'users' collection for the role.
+          // In a real app, you should check the role in Firestore
           return const MainScreen();
         }
         return const WelcomeScreen();
@@ -203,7 +200,7 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
-// ================== AUTH SCREEN (Login/Signup) ==================
+// ================== AUTH SCREEN (Updated with Name Input) ==================
 class AuthScreen extends StatefulWidget {
   final String userType;
   const AuthScreen({super.key, required this.userType});
@@ -213,12 +210,19 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  final _nameController = TextEditingController(); // Added Name Controller
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true;
   bool _isLoading = false;
 
   Future<void> _submitAuth() async {
+    if (!_isLogin && _nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter your name')));
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       UserCredential userCredential;
@@ -233,14 +237,20 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
-        // Save user type to Firestore upon registration
+
+        // Save initial user data with 0 balance
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userCredential.user!.uid)
             .set({
+          'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
           'role': widget.userType,
           'createdAt': Timestamp.now(),
+          // Initial Stats
+          'balance': 0,
+          'completedGigs': 0,
+          'activeGigs': 0,
         });
       }
 
@@ -275,7 +285,7 @@ class _AuthScreenState extends State<AuthScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.indigo)),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,6 +304,21 @@ class _AuthScreenState extends State<AuthScreen> {
                 ? 'Welcome back!'
                 : 'Create an account to get started'),
             const SizedBox(height: 40),
+
+            // Show Name field only for Sign Up
+            if (!_isLogin) ...[
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Full Name',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.person),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
             TextField(
               controller: _emailController,
               decoration: InputDecoration(
@@ -415,7 +440,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ================== HUSTLE SCREEN (With Apply Functionality) ==================
+// ================== HUSTLE SCREEN ==================
 class HustleScreen extends StatefulWidget {
   const HustleScreen({super.key});
 
@@ -426,7 +451,6 @@ class HustleScreen extends StatefulWidget {
 class _HustleScreenState extends State<HustleScreen> {
   bool _showQuickTasks = true;
 
-  // --- THE APPLY FUNCTION ---
   Future<void> _applyForGig(Map<String, dynamic> gig, String gigId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -436,7 +460,6 @@ class _HustleScreenState extends State<HustleScreen> {
     }
 
     try {
-      // 1. Check if already applied
       final existing = await FirebaseFirestore.instance
           .collection('applications')
           .where('gigId', isEqualTo: gigId)
@@ -450,18 +473,18 @@ class _HustleScreenState extends State<HustleScreen> {
         return;
       }
 
-      // 2. Save Application
+      // Save Application with status 'Pending'
       await FirebaseFirestore.instance.collection('applications').add({
         'gigId': gigId,
         'gigTitle': gig['title'],
         'employerId': gig['employerId'],
         'applicantId': user.uid,
         'applicantEmail': user.email ?? 'Unknown',
+        'pay': gig['pay'], // Save the pay amount here so we can add it later
         'status': 'Pending',
         'appliedAt': Timestamp.now(),
       });
 
-      // 3. Update Applicant Count
       await FirebaseFirestore.instance.collection('gigs').doc(gigId).update({
         'applicantCount': FieldValue.increment(1),
       });
@@ -490,10 +513,16 @@ class _HustleScreenState extends State<HustleScreen> {
                     .where('type',
                         isEqualTo:
                             _showQuickTasks ? 'Quick Task' : 'Skilled Project')
+                    // .orderBy('createdAt', descending: true) // Create index in Firebase Console to use this
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                        child: Text('Error: ${snapshot.error}',
+                            style: const TextStyle(color: Colors.red)));
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return const Center(
@@ -509,7 +538,6 @@ class _HustleScreenState extends State<HustleScreen> {
                       final doc = gigs[index];
                       final gig = doc.data() as Map<String, dynamic>;
                       final gigId = doc.id;
-                      // Pass gigId to builders
                       return _showQuickTasks
                           ? _buildQuickTaskItem(gig, gigId)
                           : _buildSkilledGigItem(gig, gigId);
@@ -726,6 +754,344 @@ class _HustleScreenState extends State<HustleScreen> {
   }
 }
 
+// ================== EARNINGS SCREEN (Dynamic Data) ==================
+class EarningsScreen extends StatelessWidget {
+  const EarningsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return const Center(child: Text("Please Login"));
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, userSnapshot) {
+        if (!userSnapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
+
+        final userData =
+            userSnapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final balance = userData['balance'] ?? 0;
+        final completed = userData['completedGigs'] ?? 0;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F5F5),
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30)),
+                  ),
+                  child: SafeArea(
+                    child: Column(
+                      children: [
+                        const Text('Your Earnings',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 30),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 24, horizontal: 30),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text('Total Earned',
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 16)),
+                              const SizedBox(height: 10),
+                              Text('₹ $balance',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 40,
+                                      fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Stats
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: _buildStatCard('Completed', '$completed',
+                              Icons.check_circle, Colors.green)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                          child: _buildStatCard('Active', '2',
+                              Icons.rocket_launch, Colors.orange)),
+                    ],
+                  ),
+                ),
+
+                // Transaction History List
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('History',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold))),
+                ),
+
+                // Fetch transactions from subcollection
+                StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .collection('transactions')
+                        .orderBy('date', descending: true)
+                        .snapshots(),
+                    builder: (context, transSnapshot) {
+                      if (!transSnapshot.hasData ||
+                          transSnapshot.data!.docs.isEmpty) {
+                        return const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text("No transactions yet"));
+                      }
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(20),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: transSnapshot.data!.docs.length,
+                        itemBuilder: (context, index) {
+                          final t = transSnapshot.data!.docs[index].data()
+                              as Map<String, dynamic>;
+                          return _buildTransactionTile(t['title'], 'Completed',
+                              '₹${t['amount']}', Colors.green);
+                        },
+                      );
+                    })
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+          ]),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 12),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionTile(
+      String title, String status, String amount, Color statusColor) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 5)
+          ]),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, color: statusColor, size: 20),
+          const SizedBox(width: 16),
+          Expanded(
+              child: Text(title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16))),
+          Text(amount,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        ],
+      ),
+    );
+  }
+}
+
+// ================== PROFILE SCREEN (Dynamic Data) ==================
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Center(child: Text("Please Login"));
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
+
+        final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final name = data['name'] ?? 'User';
+        final email = data['email'] ?? '';
+        final balance = data['balance'] ?? 0;
+        final completed = data['completedGigs'] ?? 0;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F5F5),
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                        colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)]),
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 20, bottom: 40),
+                      child: Column(
+                        children: [
+                          const CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Colors.white,
+                              child: Icon(Icons.person,
+                                  size: 60, color: Colors.indigo)),
+                          const SizedBox(height: 16),
+                          Text(name,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text(email,
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Stats Overlap
+                Transform.translate(
+                  offset: const Offset(0, -20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        _buildInfoCard('Total Earned', '₹$balance',
+                            Icons.account_balance_wallet, Colors.green),
+                        const SizedBox(height: 12),
+                        _buildInfoCard('Completed Gigs', '$completed',
+                            Icons.check_circle, Colors.blue),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Logout
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await FirebaseAuth.instance.signOut();
+                        if (!context.mounted) return;
+                        Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const WelcomeScreen()),
+                            (route) => false);
+                      },
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      label: const Text('Logout',
+                          style: TextStyle(color: Colors.white, fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12))),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoCard(
+      String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+          ]),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+              const SizedBox(height: 4),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ================== EMPLOYER MAIN SCREEN ==================
 class EmployerMainScreen extends StatefulWidget {
   const EmployerMainScreen({super.key});
@@ -795,7 +1161,7 @@ class _EmployerMainScreenState extends State<EmployerMainScreen> {
   }
 }
 
-// ================== EMPLOYER DASHBOARD (Navigates to Applicants) ==================
+// ================== EMPLOYER DASHBOARD ==================
 class EmployerDashboard extends StatelessWidget {
   const EmployerDashboard({super.key});
 
@@ -827,18 +1193,14 @@ class EmployerDashboard extends StatelessWidget {
             itemBuilder: (context, index) {
               final doc = snapshot.data!.docs[index];
               final gig = doc.data() as Map<String, dynamic>;
-              final gigId = doc.id;
 
-              // Tap card to see applicants
               return GestureDetector(
                 onTap: () {
                   Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ApplicantsScreen(
-                          gigId: gigId, gigTitle: gig['title']),
-                    ),
-                  );
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ApplicantsScreen(
+                              gigId: doc.id, gigTitle: gig['title'])));
                 },
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -854,46 +1216,17 @@ class EmployerDashboard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                              child: Text(gig['title'],
-                                  style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold))),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8)),
-                            child: const Text('Active',
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.green)),
-                          ),
-                        ],
-                      ),
+                      Text(gig['title'],
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text('Type: ${gig['type']}'),
                       Text('Pay: ₹${gig['pay']}'),
-                      const Divider(height: 20),
-                      Row(
-                        children: [
-                          const Icon(Icons.people,
-                              size: 16, color: Colors.indigo),
-                          const SizedBox(width: 8),
-                          // Display Applicant Count
-                          Text('${gig['applicantCount'] ?? 0} Applicants',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.indigo)),
-                          const Spacer(),
-                          const Text('Tap to view',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
-                        ],
-                      ),
+                      const Divider(),
+                      Text(
+                          '${gig['applicantCount'] ?? 0} Applicants - Tap to view',
+                          style: const TextStyle(
+                              color: Colors.indigo,
+                              fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
@@ -906,7 +1239,7 @@ class EmployerDashboard extends StatelessWidget {
   }
 }
 
-// ================== APPLICANTS SCREEN (Employer View) ==================
+// ================== APPLICANTS SCREEN (With Payment Logic) ==================
 class ApplicantsScreen extends StatelessWidget {
   final String gigId;
   final String gigTitle;
@@ -914,26 +1247,59 @@ class ApplicantsScreen extends StatelessWidget {
   const ApplicantsScreen(
       {super.key, required this.gigId, required this.gigTitle});
 
+  Future<void> _hireAndPay(BuildContext context, String applicationId,
+      String studentId, int payAmount) async {
+    try {
+      // 1. Update Application status to Hired/Completed
+      await FirebaseFirestore.instance
+          .collection('applications')
+          .doc(applicationId)
+          .update({'status': 'Hired & Paid'});
+
+      // 2. Add Money to Student Balance
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(studentId)
+          .update({
+        'balance': FieldValue.increment(payAmount),
+        'completedGigs': FieldValue.increment(1),
+      });
+
+      // 3. Create Transaction Record for Student
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(studentId)
+          .collection('transactions')
+          .add({
+        'title': gigTitle,
+        'amount': payAmount,
+        'date': Timestamp.now(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Student Hired & Paid Successfully!'),
+          backgroundColor: Colors.green));
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(gigTitle, style: const TextStyle(fontSize: 16)),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
-      ),
+          title: Text('Applicants: $gigTitle'),
+          backgroundColor: Colors.indigo,
+          foregroundColor: Colors.white),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('applications')
             .where('gigId', isEqualTo: gigId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
             return const Center(child: Text('No applicants yet.'));
-          }
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -941,47 +1307,25 @@ class ApplicantsScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final doc = snapshot.data!.docs[index];
               final app = doc.data() as Map<String, dynamic>;
+              final int payAmount = app['pay'] ?? 0;
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.indigo.shade100,
-                    child: const Icon(Icons.person, color: Colors.indigo),
-                  ),
-                  title: Text(app['applicantEmail'] ?? 'Unknown Applicant'),
+                  leading: const CircleAvatar(child: Icon(Icons.person)),
+                  title: Text(app['applicantEmail'] ?? 'Unknown'),
                   subtitle: Text('Status: ${app['status']}'),
                   trailing: app['status'] == 'Pending'
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.check_circle,
-                                  color: Colors.green),
-                              onPressed: () {
-                                FirebaseFirestore.instance
-                                    .collection('applications')
-                                    .doc(doc.id)
-                                    .update({'status': 'Hired'});
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.cancel, color: Colors.red),
-                              onPressed: () {
-                                FirebaseFirestore.instance
-                                    .collection('applications')
-                                    .doc(doc.id)
-                                    .update({'status': 'Rejected'});
-                              },
-                            ),
-                          ],
+                      ? ElevatedButton(
+                          onPressed: () => _hireAndPay(
+                              context, doc.id, app['applicantId'], payAmount),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green),
+                          child: const Text('Mark Complete & Pay',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 10)),
                         )
-                      : Icon(
-                          app['status'] == 'Hired' ? Icons.check : Icons.close,
-                          color: app['status'] == 'Hired'
-                              ? Colors.green
-                              : Colors.red,
-                        ),
+                      : const Icon(Icons.check_circle, color: Colors.green),
                 ),
               );
             },
@@ -1023,7 +1367,7 @@ class _PostGigScreenState extends State<PostGigScreen> {
         'postedBy': user?.email,
         'createdAt': Timestamp.now(),
         'status': 'Active',
-        'applicantCount': 0, // Initialize count
+        'applicantCount': 0,
       });
 
       if (!mounted) return;
@@ -1067,42 +1411,33 @@ class _PostGigScreenState extends State<PostGigScreen> {
             TextField(
               controller: _titleController,
               decoration: InputDecoration(
-                labelText: 'Job Title',
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.all(16),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
-              ),
+                  labelText: 'Job Title',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12))),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _budgetController,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: 'Budget (₹)',
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.all(16),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
-              ),
+                  labelText: 'Budget (₹)',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12))),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _descController,
               maxLines: 5,
               decoration: InputDecoration(
-                labelText: 'Description',
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.all(16),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
-              ),
+                  labelText: 'Description',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12))),
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -1133,11 +1468,10 @@ class _PostGigScreenState extends State<PostGigScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.indigo : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: isSelected ? Colors.indigo : Colors.grey.shade300),
-        ),
+            color: isSelected ? Colors.indigo : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: isSelected ? Colors.indigo : Colors.grey.shade300)),
         child: Column(
           children: [
             Icon(icon,
@@ -1148,38 +1482,6 @@ class _PostGigScreenState extends State<PostGigScreen> {
                     color: isSelected ? Colors.white : Colors.black,
                     fontWeight: FontWeight.bold)),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ================== OTHER SCREENS (Placeholders) ==================
-class EarningsScreen extends StatelessWidget {
-  const EarningsScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-        body: Center(child: Text("Earnings (Connect to Firestore User Data)")));
-  }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            await FirebaseAuth.instance.signOut();
-            if (!context.mounted) return;
-            Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-                (route) => false);
-          },
-          child: const Text("Logout"),
         ),
       ),
     );
