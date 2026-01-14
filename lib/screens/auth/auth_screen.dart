@@ -20,6 +20,12 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLoading = false;
 
   Future<void> _submitAuth() async {
+    if (!_isLogin && _nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter your name')));
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       UserCredential userCredential;
@@ -55,9 +61,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 : const EmployerMainScreen()),
         (route) => false,
       );
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+          .showSnackBar(SnackBar(content: Text(e.message ?? 'Auth failed')));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -66,35 +72,73 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.indigo)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_isLogin ? 'Login' : 'Sign Up',
+            Text(
+                _isLogin
+                    ? 'Login as ${widget.userType}'
+                    : 'Join as ${widget.userType}',
                 style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: Colors.indigo)),
             const SizedBox(height: 40),
-            if (!_isLogin)
+            if (!_isLogin) ...[
               TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Full Name')),
+                  decoration: InputDecoration(
+                      labelText: 'Full Name',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      prefixIcon: const Icon(Icons.person))),
+              const SizedBox(height: 20),
+            ],
             TextField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email')),
+                decoration: InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.email))),
+            const SizedBox(height: 20),
             TextField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password')),
+                decoration: InputDecoration(
+                    labelText: 'Password',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.lock))),
             const SizedBox(height: 40),
-            ElevatedButton(
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
                 onPressed: _isLoading ? null : _submitAuth,
-                child: Text(_isLogin ? 'Login' : 'Sign Up')),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12))),
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(_isLogin ? 'Login' : 'Sign Up',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 18)),
+              ),
+            ),
+            const SizedBox(height: 20),
             TextButton(
                 onPressed: () => setState(() => _isLogin = !_isLogin),
-                child: Text(_isLogin ? 'Create account' : 'Login')),
+                child: Text(_isLogin
+                    ? 'Create new account'
+                    : 'I already have an account')),
           ],
         ),
       ),
