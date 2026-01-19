@@ -20,6 +20,7 @@ class _PostGigScreenState extends State<PostGigScreen> {
     if (_titleController.text.isEmpty || _budgetController.text.isEmpty) return;
     setState(() => _isPosting = true);
     final user = FirebaseAuth.instance.currentUser;
+
     try {
       await FirebaseFirestore.instance.collection('gigs').add({
         'title': _titleController.text.trim(),
@@ -32,6 +33,7 @@ class _PostGigScreenState extends State<PostGigScreen> {
         'status': 'Active',
         'applicantCount': 0,
       });
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Gig Posted!'), backgroundColor: Colors.green));
       _titleController.clear();
@@ -48,92 +50,112 @@ class _PostGigScreenState extends State<PostGigScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
-          title:
-              const Text('Post New Gig', style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.indigo),
+        title: const Text('Post New Gig',
+            style: TextStyle(
+                color: Color(0xFF2D3447), fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        automaticallyImplyLeading: false,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Row(
-              children: [
-                Expanded(
-                    child: _buildTypeSelector('Quick Task', Icons.flash_on)),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _buildTypeSelector(
-                        'Skilled Project', Icons.workspace_premium)),
-              ],
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                  color: Colors.white, borderRadius: BorderRadius.circular(30)),
+              child: Row(
+                children: [
+                  _toggleBtn('Quick Task', _selectedType == 'Quick Task',
+                      () => setState(() => _selectedType = 'Quick Task')),
+                  _toggleBtn(
+                      'Skilled Project',
+                      _selectedType == 'Skilled Project',
+                      () => setState(() => _selectedType = 'Skilled Project')),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
-            TextField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                    labelText: 'Job Title',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)))),
+            _inputField(_titleController, 'Job Title', Icons.title_rounded),
             const SizedBox(height: 16),
-            TextField(
-                controller: _budgetController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                    labelText: 'Budget (₹)',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)))),
+            _inputField(
+                _budgetController, 'Budget (₹)', Icons.currency_rupee_rounded,
+                isNumber: true),
             const SizedBox(height: 16),
-            TextField(
-                controller: _descController,
-                maxLines: 5,
-                decoration: InputDecoration(
-                    labelText: 'Description',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)))),
+            _inputField(
+                _descController, 'Description', Icons.description_rounded,
+                maxLines: 5),
             const SizedBox(height: 32),
             SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                    onPressed: _isPosting ? null : _postGig,
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigo,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12))),
-                    child: const Text('Post Gig',
-                        style: TextStyle(color: Colors.white)))),
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: _isPosting ? null : _postGig,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4E54C8),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  elevation: 5,
+                  shadowColor: const Color(0xFF4E54C8).withOpacity(0.4),
+                ),
+                child: _isPosting
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Post Gig',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTypeSelector(String type, IconData icon) {
-    final isSelected = _selectedType == type;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedType = type),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-            color: isSelected ? Colors.indigo : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: isSelected ? Colors.indigo : Colors.grey.shade300)),
-        child: Column(
-          children: [
-            Icon(icon,
-                color: isSelected ? Colors.amber : Colors.grey, size: 30),
-            const SizedBox(height: 8),
-            Text(type,
-                style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.bold)),
-          ],
+  Widget _toggleBtn(String text, bool isActive, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF4E54C8) : Colors.transparent,
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: Center(
+              child: Text(text,
+                  style: TextStyle(
+                      color: isActive ? Colors.white : Colors.grey,
+                      fontWeight: FontWeight.bold))),
+        ),
+      ),
+    );
+  }
+
+  Widget _inputField(
+      TextEditingController controller, String label, IconData icon,
+      {bool isNumber = false, int maxLines = 1}) {
+    return Container(
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10)
+          ]),
+      child: TextField(
+        controller: controller,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Colors.grey[400]),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.all(20),
         ),
       ),
     );
